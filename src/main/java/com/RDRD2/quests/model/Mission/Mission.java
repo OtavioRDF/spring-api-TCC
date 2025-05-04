@@ -1,9 +1,9 @@
-package com.RDRD2.quests.model.mission;
+package com.RDRD2.quests.model.Mission;
 
 
 import java.time.LocalDateTime;
 
-import com.RDRD2.quests.model.player.Player;
+import com.RDRD2.quests.model.Player.Player;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
@@ -30,7 +30,7 @@ public class Mission {
     @Column(nullable = false)
     private double moneyReward = 0.0;
 
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_id", nullable = true)
     @JsonIgnoreProperties("missions")
     private Player player;

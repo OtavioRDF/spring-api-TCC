@@ -1,7 +1,8 @@
-package com.RDRD2.quests.repository.mission;
+package com.RDRD2.quests.repository.Mission;
 
-import com.RDRD2.quests.model.mission.Mission;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.RDRD2.quests.model.Mission.Mission;
 
 public interface MissionRepository extends JpaRepository<Mission, Long>{
 }

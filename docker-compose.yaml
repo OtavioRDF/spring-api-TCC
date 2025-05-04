@@ -1,17 +1,22 @@
 version: "3.1"
 
 services:
-  quests:
+  quests-spring:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: quests
+    container_name: quests-spring
     ports:
       - 8080:8080
-    networks:
-      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/prometheus"]
+      interval: 15s
+      timeout: 2s
+      retries: 3
     depends_on:
       - database
+    networks:
+      - monitoring
       
   database:
     image: postgres:13.1
@@ -25,6 +30,10 @@ services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
+    command: 
+     - '--web.enable-remote-write-receiver'
+     - '--enable-feature=native-histograms'
+     - '--config.file=/etc/prometheus/prometheus.yml'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -42,6 +51,24 @@ services:
     networks:
       - monitoring
 
+  k6:
+    image: grafana/k6
+    container_name: k6
+    command: [
+      "run",
+      "--out", "experimental-prometheus-rw",
+      "/scripts/test-loader.js"
+    ]
+    environment:
+      K6_PROMETHEUS_RW_SERVER_URL: "http://prometheus:9090/api/v1/write"
+      K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM: true
+    volumes:
+      - ./k6:/scripts
+    depends_on:
+      quests-spring:
+        condition: service_healthy
+    networks:
+      - monitoring
 volumes:
   grafana-storage:
 

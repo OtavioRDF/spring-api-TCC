@@ -1,9 +1,9 @@
-package com.RDRD2.quests.model.player;
+package com.RDRD2.quests.model.Player;
 
 import java.util.List;
 import java.util.Map;
 
-import com.RDRD2.quests.model.mission.Mission;
+import com.RDRD2.quests.model.Mission.Mission;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;

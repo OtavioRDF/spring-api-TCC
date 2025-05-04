@@ -1,31 +1,39 @@
 package com.RDRD2.quests.service.Mission;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.RDRD2.quests.model.mission.Mission;
-import com.RDRD2.quests.model.player.Player;
-import com.RDRD2.quests.repository.mission.MissionRepository;
-import com.RDRD2.quests.repository.player.PlayerRepository;
+import com.RDRD2.quests.dto.Mission.CreateMissionDTO;
+import com.RDRD2.quests.dto.Mission.UpdateMissionDTO;
+import com.RDRD2.quests.mapper.MissionMapper;
+import com.RDRD2.quests.model.Mission.Mission;
+import com.RDRD2.quests.model.Player.Player;
+import com.RDRD2.quests.repository.Mission.MissionRepository;
+import com.RDRD2.quests.repository.Player.PlayerRepository;
 
 import jakarta.transaction.Transactional;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 public class MissionService {
-  private final MissionRepository missionRepository;
+    private final MissionRepository missionRepository;
     private final PlayerRepository playerRepository;
+    private final MissionMapper missionMapper;
 
-    public MissionService(MissionRepository missionRepository, PlayerRepository playerRepository) {
+    public MissionService(MissionRepository missionRepository, PlayerRepository playerRepository,
+            MissionMapper missionMapper) {
         this.missionRepository = missionRepository;
         this.playerRepository = playerRepository;
+        this.missionMapper = missionMapper;
     }
 
     @Transactional
-    public Mission create(Mission mission) {
-        return missionRepository.save(mission);
+    public Mission create(CreateMissionDTO mission) {
+        Mission entity = missionMapper.createToEntity(mission);
+        return missionRepository.save(entity);
     }
 
     @Transactional
@@ -39,15 +47,13 @@ public class MissionService {
     }
 
     @Transactional
-    public Mission update(Long id, Mission updatedMission) {
-        return missionRepository.findById(id).map(mission -> {
-            mission.setName(updatedMission.getName());
-            mission.setDescription(updatedMission.getDescription());
-            mission.setReputationReward(updatedMission.getReputationReward());
-            mission.setMoneyReward(updatedMission.getMoneyReward());
-            mission.setCompleted(updatedMission.isCompleted());
-            return missionRepository.save(mission);
-        }).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Mission with ID " + id + " not found!"));
+    public Mission update(Long id, UpdateMissionDTO updatedMission) {
+        Mission mission = missionRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Mission with ID " + id + " not found!"));
+
+        Mission updatedEntity = missionMapper.updateToEntity(updatedMission, mission);
+
+        return missionRepository.save(updatedEntity);
     }
 
     @Transactional
@@ -82,13 +88,27 @@ public class MissionService {
 
     @Transactional
     public Mission assignMission(Long playerId, Long missionId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Player with ID " + playerId + " not found!"));
+        try {
+            Player player = playerRepository.findById(playerId)
+                    .orElseThrow(
+                            () -> new ResponseStatusException(NOT_FOUND, "Player with ID " + playerId + " not found!"));
 
-        Mission mission = missionRepository.findById(missionId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Mission with ID " + missionId + " not found!"));
+            Mission mission = missionRepository.findById(missionId)
+                    .orElseThrow(
+                            () -> new ResponseStatusException(NOT_FOUND,
+                                    "Mission with ID " + missionId + " not found!"));
 
-        mission.setPlayer(player);
-        return missionRepository.save(mission);
+            mission.setPlayer(player);
+
+            if (mission.isCompleted()) {
+                player.setReputation(mission.getReputationReward());
+                player.setMoney(mission.getMoneyReward());
+                playerRepository.save(player);
+            }
+            return missionRepository.save(mission);
+
+        } catch (Exception error) {
+            throw new ResponseStatusException(NOT_FOUND, "Error assigning mission: " + error.getMessage());
+        }
     }
 }
